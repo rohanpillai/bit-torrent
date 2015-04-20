@@ -27,108 +27,84 @@ string getValue(char *str, char **next) {
   return oss.str();
 }
 
-class bencodedObject {
- public:
-  int type;
-  virtual void printValue() = 0;  
-};
+bencodedString::bencodedString(char **str) {
+  char *next;
+  value = getValue(*str, &next);
+  *str = next;
+  type = BENCODED_STRING;
+}
 
-class bencodedString: public bencodedObject {
- public:
-  string value;
-  bencodedString(char **str) {
-    char *next;
-    value = getValue(*str, &next);
-    *str = next;
-    type = BENCODED_STRING;
-  }
-  void printValue() {
-    cout << value;
-  }
-};
+void bencodedString::printValue() {
+  cout << '"' << value << '"';
+}
 
-class bencodedDict: public bencodedObject {
- public:
-  map<bencodedString *, bencodedObject *> bmap;
-  bencodedDict() {
-    type = BENCODED_DICT;
-  }
-  void insert(char **);
-  void printValue();
-  bencodedObject *getValueForKey(string);
-};
+bencodedDict::bencodedDict() {
+  type = BENCODED_DICT;
+}
 
-class bencodedInteger: public bencodedObject {
- public:
-  long value;
-  bencodedInteger(char **str) {
-    ostringstream oss;
-    while (*(*str) != 'e') {
-      oss << *(*str);
-      (*str)++;
-    }
+bencodedInteger::bencodedInteger(char **str) {
+  ostringstream oss;
+  while (*(*str) != 'e') {
+    oss << *(*str);
     (*str)++;
-    value = stol(oss.str()); 
-    type = BENCODED_INTEGER;
   }
-  void printValue() {
-    cout << value ;
-  }
-};
-  
+  (*str)++;
+  value = stoi(oss.str()); 
+  type = BENCODED_INTEGER;
+}
 
-class bencodedList: public bencodedObject {
- public:
-  list<bencodedObject *> lst;
-  bencodedList() {
-    type = BENCODED_LIST;
-  }
-  void insert(char **str) {
-    if (isString(*str)) {
-      bencodedString* bstr = new bencodedString(str);
-      lst.push_back(bstr);
-    } else {
-      switch (*(*str)) {
-        case 'i': {
-          (*str)++;
-          bencodedInteger* bint = new bencodedInteger(str);
-          lst.push_back(bint);
-          break;
-        }
-        case 'e': {
-          (*str)++;
-          return;
-        }
-        case 'l': {
-          bencodedList *blist = new bencodedList();
-          (*str)++;
-          blist->insert(str);
-          lst.push_back(blist);
-          break;
-        }
-        case 'd': {
-          bencodedDict *bdict = new bencodedDict();
-          (*str)++;
-          bdict->insert(str);
-          lst.push_back(bdict);
-          break;
-        }
-        default: {
-          cout << "Unexpected value " << *str << '\n';
-        }
+void bencodedInteger::printValue() {
+  cout << value ;
+}
+
+bencodedList::bencodedList() {
+  type = BENCODED_LIST;
+}
+void bencodedList::insert(char **str) {
+  if (isString(*str)) {
+    bencodedString* bstr = new bencodedString(str);
+    lst.push_back(bstr);
+  } else {
+    switch (*(*str)) {
+      case 'i': {
+        (*str)++;
+        bencodedInteger* bint = new bencodedInteger(str);
+        lst.push_back(bint);
+        break;
+      }
+      case 'e': {
+        (*str)++;
+        return;
+      }
+      case 'l': {
+        bencodedList *blist = new bencodedList();
+        (*str)++;
+        blist->insert(str);
+        lst.push_back(blist);
+        break;
+      }
+      case 'd': {
+        bencodedDict *bdict = new bencodedDict();
+        (*str)++;
+        bdict->insert(str);
+        lst.push_back(bdict);
+        break;
+      }
+      default: {
+        cout << "Unexpected value " << *str << '\n';
       }
     }
-    insert(str);
   }
-  void printValue() {
-    cout << "list:";
-    for (list<bencodedObject *>::iterator it=lst.begin(); it != lst.end(); it++) {
-      (*it)->printValue();
-      cout << ',';
-    }
-    cout << '\n';
+  insert(str);
+}
+void bencodedList::printValue() {
+  cout << "[";
+  for (list<bencodedObject *>::iterator it=lst.begin(); it != lst.end(); it++) {
+    (*it)->printValue();
+    cout << ',';
   }
-};
+  cout << "]\n";
+}
 
 bencodedObject *constructValue(char **str) {
   if (isString(*str)) {
@@ -169,7 +145,7 @@ void bencodedDict::insert(char **str) {
 }
 
 void bencodedDict::printValue() {
-  cout << "dict:\t";
+  cout << "{";
   for (map<bencodedString *, bencodedObject *>::iterator it = bmap.begin(); it != bmap.end(); it++) {
     cout << '(';
     ((*it).first)->printValue();
@@ -177,7 +153,7 @@ void bencodedDict::printValue() {
     ((*it).second)->printValue();
     cout << ')';
   }
-  cout << '\n';
+  cout << "}\n";
 }
 
 bencodedObject *bencodedDict::getValueForKey(string key) {
@@ -189,7 +165,7 @@ bencodedObject *bencodedDict::getValueForKey(string key) {
   return NULL;
 }
 
-bencodedDict *parse_file(char *file_name) {
+bencodedDict *parse_torrent_file(char *file_name) {
   ifstream ifs(file_name);
   bencodedDict *bdict = NULL;
   if (ifs) {
@@ -210,28 +186,16 @@ bencodedDict *parse_file(char *file_name) {
   return bdict;
 }
 
-MetaInfo *extractMetaInfo(char *file_name) {
-  bencodedDict *metadata = parse_file(file_name);
-  if (metadata == NULL) {
-    cout << "Bad torrent file.\n";
-    return NULL;
-  }
+bt_info_t *extract_bt_info(bencodedDict *metadata) {
 
-  string announce("announce");
   string info("info");
   string name("name");
   string piece_length("piece length");
   string length("length");
   string pieces("pieces");
 
-  MetaInfo *metaInfo = (MetaInfo *) malloc(sizeof(MetaInfo));
-  bencodedObject *bannounce = metadata->getValueForKey(announce);
-  if (bannounce->type != BENCODED_STRING) {
-    cout << "The value for announce is the torrent file is not a string\n";
-    return NULL;
-  }
-  metaInfo->announce = (((bencodedString *) bannounce)->value).c_str();
-// (metaInfo->announce).assign(((bencodedString *) bannounce)->value);
+  bt_info_t *bt_info = (bt_info_t *) malloc(sizeof(bt_info_t));
+
   bencodedObject *binfo = metadata->getValueForKey(info);
   if (binfo->type != BENCODED_DICT) {
     cout << "The value for info key is not a dictionary\n";
@@ -243,42 +207,50 @@ MetaInfo *extractMetaInfo(char *file_name) {
     cout << "The value for name in the torrent file should be a string\n";
     return NULL;
   }
-  metaInfo->name = (((bencodedString *) bname)->value).c_str(); 
-  bencodedObject *bpieces = binfo_dict->getValueForKey(pieces);
-  if (bpieces->type != BENCODED_STRING) {
-    cout << "The value for pieces in the torrent file should be a string\n";
-    return NULL;
-  }
-  metaInfo->pieces = (((bencodedString *) bpieces)->value).c_str(); 
+  
+  strncpy(bt_info->name, (((bencodedString *)bname)->value).c_str(), FILE_NAME_MAX);
 
   bencodedObject *bpiece_length= binfo_dict->getValueForKey(piece_length);
   if (bpiece_length->type != BENCODED_INTEGER) {
     cout << "The value for piece_length in the torrent file should be an integer\n";
     return NULL;
   }
-  metaInfo->piece_length = (((bencodedInteger *) bpiece_length)->value); 
+  bt_info->piece_length = (((bencodedInteger *) bpiece_length)->value); 
 
   bencodedObject *bfile_length= binfo_dict->getValueForKey(length);
   if (bfile_length->type != BENCODED_INTEGER) {
     cout << "The value for file length in the torrent file should be an integer\n";
     return NULL;
   }
-  metaInfo->file_length = (((bencodedInteger *) bfile_length)->value); 
+  bt_info->length = (((bencodedInteger *) bfile_length)->value); 
   
-  return metaInfo;
+  bt_info->num_pieces = (int) ceil(((float) bt_info->length)/((float) bt_info->piece_length));
+
+  bencodedObject *bpieces = binfo_dict->getValueForKey(pieces);
+  if (bpieces->type != BENCODED_STRING) {
+    cout << "The value for pieces in the torrent file should be a string\n";
+    return NULL;
+  }
+  const char *piece_hashes = (((bencodedString *) bpieces)->value).c_str(); 
+  bt_info->piece_hashes = new char*[bt_info->num_pieces];
+
+  for (int i=0; i < bt_info->num_pieces; i++) {
+    bt_info->piece_hashes[i] = new char[20];
+    strncpy(bt_info->piece_hashes[i], (piece_hashes + i*20), 20);
+  }
+  return bt_info;
 }
 
-void printMetaInfo(MetaInfo *metaInfo) {
-  cout << "URL of torrent tracker " << metaInfo->announce << '\n';
-  cout << "Name of file: " << metaInfo->name << '\n';
-  cout << "Length of file: " << metaInfo->file_length << '\n';
-  cout << "Length of piece: " << metaInfo->piece_length << '\n';
-  cout << "SHA1 hash of pieces: " << metaInfo->pieces << '\n';
-}
-
-int main(int argc, char *argv[]) {
-  char *file_name = argv[1];
-  MetaInfo *metaInfo = extractMetaInfo(file_name);
-  printMetaInfo(metaInfo);
-  return 0;
+void printInfo(bt_info_t *bt_info) {
+  printf("Name: %s\n", bt_info->name);
+  printf("File length: %d\n", bt_info->length);
+  printf("Piece length: %d\n", bt_info->piece_length);
+  printf("Number of pieces: %d\n", bt_info->num_pieces);
+  for (int i=0; i< bt_info->num_pieces; i++) {
+    printf("Hash value for piece %d: ", i + 1);
+    for (int j=0; j < 20; j++) {
+      printf("%02x", (unsigned char) *(bt_info->piece_hashes[i] + j));
+    }
+    printf("\n");
+  }
 }
