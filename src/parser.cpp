@@ -34,8 +34,8 @@ bencodedString::bencodedString(char **str) {
   type = BENCODED_STRING;
 }
 
-void bencodedString::printValue() {
-  cout << '"' << value << '"';
+void bencodedString::printValue(stringstream &ss) {
+  ss << '"' << value << '"';
 }
 
 bencodedDict::bencodedDict() {
@@ -53,8 +53,8 @@ bencodedInteger::bencodedInteger(char **str) {
   type = BENCODED_INTEGER;
 }
 
-void bencodedInteger::printValue() {
-  cout << value ;
+void bencodedInteger::printValue(stringstream &oss) {
+  oss << value ;
 }
 
 bencodedList::bencodedList() {
@@ -97,13 +97,13 @@ void bencodedList::insert(char **str) {
   }
   insert(str);
 }
-void bencodedList::printValue() {
-  cout << "[";
+void bencodedList::printValue(stringstream &oss) {
+  oss << "[";
   for (list<bencodedObject *>::iterator it=lst.begin(); it != lst.end(); it++) {
-    (*it)->printValue();
-    cout << ',';
+    (*it)->printValue(oss);
+    oss << ',';
   }
-  cout << "]\n";
+  oss << "]\n";
 }
 
 bencodedObject *constructValue(char **str) {
@@ -144,16 +144,16 @@ void bencodedDict::insert(char **str) {
   insert(str);
 }
 
-void bencodedDict::printValue() {
-  cout << "{";
+void bencodedDict::printValue(stringstream &oss) {
+  oss << "{";
   for (map<bencodedString *, bencodedObject *>::iterator it = bmap.begin(); it != bmap.end(); it++) {
-    cout << '(';
-    ((*it).first)->printValue();
-    cout << " , ";
-    ((*it).second)->printValue();
-    cout << ')';
+    oss << '(';
+    ((*it).first)->printValue(oss);
+    oss << " , ";
+    ((*it).second)->printValue(oss);
+    oss << ')';
   }
-  cout << "}\n";
+  oss << "}\n";
 }
 
 bencodedObject *bencodedDict::getValueForKey(string key) {

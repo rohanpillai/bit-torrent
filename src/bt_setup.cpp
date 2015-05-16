@@ -31,6 +31,7 @@ void usage(FILE * file){
           "                \t use this peer instead, ip:port (ip or hostname)\n"
           "                \t (include multiple -p for more than 1 peer)\n"
           "  -I id         \t Set the node identifier to id (dflt: random)\n"
+          "  -x port       \t Port number for this process\n"
           "  -v            \t verbose, print additional verbose info\n");
 }
 
@@ -135,7 +136,7 @@ void parse_args(bt_args_t * bt_args, int argc,  char * argv[]){
 
   bt_args->id = 0;
   
-  while ((ch = getopt(argc, argv, "hp:s:l:vI:")) != -1) {
+  while ((ch = getopt(argc, argv, "hp:s:l:vI:x:")) != -1) {
     switch (ch) {
     case 'h': //help
       usage(stdout);
@@ -159,14 +160,24 @@ void parse_args(bt_args_t * bt_args, int argc,  char * argv[]){
         exit(1);
       }
 
-      bt_args->peers[n_peers] = (peer_t *) malloc(sizeof(peer_t));
+      bt_args->peers[n_peers - 1] = (peer_t *) malloc(sizeof(peer_t));
 
       //parse peers
-      __parse_peer(bt_args->peers[n_peers], optarg);
+      __parse_peer(bt_args->peers[n_peers-1], optarg);
       break;
     case 'I':
       bt_args->id = atoi(optarg);
       break;
+    case 'x': {
+      int port_num = atoi(optarg);
+      if (port_num < 1) {
+        fprintf(stderr, "ERROR: Port number has to be positive");
+        usage(stderr);
+        exit(1);
+      }
+      bt_args->port = optarg;
+      break;
+    }
     default:
       fprintf(stderr,"ERROR: Unknown option '-%c'\n",ch);
       usage(stdout);

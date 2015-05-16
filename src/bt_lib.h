@@ -14,6 +14,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h> 
+#include <pthread.h>
 
 #include "bt_lib.h"
 
@@ -49,7 +50,8 @@
 typedef struct peer{
   unsigned char id[ID_SIZE]; //the peer id
   unsigned short port; //the port to connect n
-  struct sockaddr_in sockaddr; //sockaddr for peer
+  struct addrinfo *addr; //sockaddr for peer
+  int h_length;
   int choked; //peer choked?
   int interested; //peer interested?
 }peer_t;
@@ -79,10 +81,14 @@ typedef struct {
   
   /* set once torrent is parsed */
   bt_info_t * bt_info; //the parsed info for this torrent
-  
+  char *port; 
 
 } bt_args_t;
 
+typedef struct {
+  peer_t *peer;
+  bt_info_t *bt_info;
+} threadargs_t;
 
 /**
  * Message structures
@@ -181,6 +187,7 @@ int sha1_piece(bt_args_t * bt_args, bt_piece_t * piece, unsigned char * hash);
   such as peer list*/
 int contact_tracker(bt_args_t * bt_args);
 
+void *spawn_thread(void *);
 
 
 #endif

@@ -45,32 +45,20 @@ void calc_id(char * ip, unsigned short port, char *id){
  **/
 int init_peer(peer_t *peer, char * id, char * ip, unsigned short port){
     
-  struct hostent * hostinfo;
-  //set the host id and port for referece
-  memcpy(peer->id, id, ID_SIZE);
-  peer->port = port;
-    
-  //get the host by name
-  if((hostinfo = gethostbyname(ip)) ==  NULL){
-    perror("gethostbyname failure, no such host?");
-    herror("gethostbyname");
-    exit(1);
+  struct addrinfo hints, *res;
+  memset(&hints, 0, sizeof(hints));
+  hints.ai_family = AF_INET;
+  hints.ai_socktype = SOCK_STREAM;
+ 
+  char *port_ch = (char *) malloc(7);
+  sprintf(port_ch, "%d", port);
+  int status;
+  if ((status = getaddrinfo(ip, port_ch, &hints, &res)) != 0) {
+    printf("ERROR: getaddrinfo: %s\n", gai_strerror(status));
+    return -1;
   }
-  
-  //zero out the sock address
-  bzero(&(peer->sockaddr), sizeof(peer->sockaddr));
-      
-  //set the family to AF_INET, i.e., Iternet Addressing
-  peer->sockaddr.sin_family = AF_INET;
-    
-  //copy the address to the right place
-  bcopy((char *) (hostinfo->h_addr), 
-        (char *) &(peer->sockaddr.sin_addr.s_addr),
-        hostinfo->h_length);
-    
-  //encode the port
-  peer->sockaddr.sin_port = htons(port);
-  
+
+  peer->addr = res;
   return 0;
 
 }
@@ -84,10 +72,12 @@ int init_peer(peer_t *peer, char * id, char * ip, unsigned short port){
 void print_peer(peer_t *peer){
   int i;
 
+  struct sockaddr_in *sockaddr = (struct sockaddr_in *) peer->addr->ai_addr;
+
   if(peer){
     printf("peer: %s:%u ",
-           inet_ntoa(peer->sockaddr.sin_addr),
-           peer->port);
+           inet_ntoa(sockaddr->sin_addr),
+           sockaddr->sin_port);
     printf("id: ");
     for(i=0;i<ID_SIZE;i++){
       printf("%02x",peer->id[i]);
@@ -95,6 +85,4 @@ void print_peer(peer_t *peer){
     printf("\n");
   }
 }
-
-
 

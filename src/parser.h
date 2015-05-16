@@ -19,14 +19,14 @@
 class bencodedObject {
  public:
   int type;
-  virtual void printValue() = 0;  
+  virtual void printValue(std::stringstream &) = 0;  
 };
 
 class bencodedString: public bencodedObject {
  public:
   std::string value;
   bencodedString(char **str);
-  void printValue();
+  void printValue(std::stringstream &);
 };
 
 class bencodedDict: public bencodedObject {
@@ -34,7 +34,7 @@ class bencodedDict: public bencodedObject {
   std::map<bencodedString *, bencodedObject *> bmap;
   bencodedDict();
   void insert(char **);
-  void printValue();
+  void printValue(std::stringstream &);
   bencodedObject *getValueForKey(std::string);
 };
 
@@ -42,7 +42,7 @@ class bencodedInteger: public bencodedObject {
  public:
   int value;
   bencodedInteger(char **str);
-  void printValue();
+  void printValue(std::stringstream &);
 };
 
 class bencodedList: public bencodedObject {
@@ -50,7 +50,7 @@ class bencodedList: public bencodedObject {
   std::list<bencodedObject *> lst;
   bencodedList(); 
   void insert(char **str);
-  void printValue();
+  void printValue(std::stringstream &);
 };
 
 bencodedDict *parse_torrent_file(char *);
