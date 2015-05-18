@@ -17,7 +17,7 @@
 
 
 
-void calc_id(char * ip, unsigned short port, char *id){
+void calc_id(char *ip, unsigned short port, char *id){
   char data[256];
   int len;
   

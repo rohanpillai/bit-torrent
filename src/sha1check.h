@@ -7,6 +7,7 @@
 #include <parser.h>
 #include <types.h>
 
-char *getSHA1(char *);
+unsigned char *getSHA1(char *);
+unsigned char *getSHA1(std::string);
 #endif
 

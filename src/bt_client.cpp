@@ -50,13 +50,15 @@ int main (int argc, char * argv[]){
   bencodedDict *info_dict = (bencodedDict *) torrent_args->getValueForKey("info");
   stringstream info_ss;
   info_dict->printValue(info_ss); 
+  string info_string = info_ss.str();
 
-  int info_str_len = info_ss.str().length();
-  char *info_str = new char[info_str_len + 1];
-  info_ss.str().copy(info_str, 0, info_str_len);
-  info_str[info_str_len] = '\0';
-
-  const char *info_hash = getSHA1(info_str);
+  unsigned char *info_hash = getSHA1(info_string);
+  cout << "Info: " << info_string << '\n';
+  
+  for (int i=0; i<20; i++) {
+    printf("%02x ", info_hash[i]);
+  }
+  printf("\n");
   bt_info_t *bt_info = extract_bt_info(torrent_args);
 
   if(bt_args.verbose){
@@ -92,6 +94,7 @@ int main (int argc, char * argv[]){
       Peer *peer = new Peer(bt_args.peers[i], info_hash);
       if (peer->isGood()) {
         printf("Added peer: \n");
+        peer->update();
         manager->addPeer(peer);
       }
     }
@@ -115,6 +118,8 @@ int main (int argc, char * argv[]){
     } 
     
     //poll current peers for incoming traffic
+    manager->updatePeers();
+
     //   write pieces to files
     //   udpdate peers choke or unchoke status
     //   responses to have/havenots/interested etc.

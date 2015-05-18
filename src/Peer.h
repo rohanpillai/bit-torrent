@@ -24,9 +24,9 @@ class Peer {
   int sockfd;
   bool good;
  public:
-  char *info_hash;
-  Peer(peer_t *, const char *);
-  Peer(int, const char *);
+  unsigned char *info_hash;
+  Peer(peer_t *, unsigned char *);
+  Peer(int, unsigned char *);
   void sendToPeer(char *, int);
   void readFromPeer(char **, int*);
   bool isGood();

@@ -73,6 +73,11 @@ bool handshake(Peer *peer) {
 
   bool handshakeComplete = false;
   while (!handshakeComplete) {
+    if (expected_values.size() == 0) {
+      handshakeComplete = true;
+      break;
+    }
+
     char *recv_bytes;
     int length;
     peer->readFromPeer(&recv_bytes, &length);
@@ -86,6 +91,7 @@ bool handshake(Peer *peer) {
       Message *message = in_messages->front();
       char *expected_string = expected_values.front();
       if (strcmp(message->getData(), expected_string) != 0) {
+        printf("Handshaking failed!");
         return false;
       }
       in_messages->pop_front();
@@ -97,9 +103,12 @@ bool handshake(Peer *peer) {
   return true;
 }
 
-Peer::Peer(peer_t *pt, const char *hash) {
+Peer::Peer(peer_t *pt, unsigned char *hash) {
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
   int flag = connect(sockfd, pt->addr->ai_addr, pt->addr->ai_addrlen);
+  info_hash = new unsigned char[20];
+  memcpy(info_hash, hash, 20);
+
   if (flag < 0) {
     printf("ERROR: %s\n", strerror(errno));
     good = false;
@@ -111,21 +120,18 @@ Peer::Peer(peer_t *pt, const char *hash) {
     sockfd = -1;
     return;
   }
-  
-  info_hash = new char[20];
-  memcpy(info_hash, hash, 20);
   good = true;
 }
 
-Peer::Peer(int fd, const char *hash) {
+Peer::Peer(int fd, unsigned char *hash) {
   sockfd = fd;
+  info_hash = new unsigned char[20];
+  memcpy(info_hash, hash, 20);
   if (!handshake(this)) {
     good = false;
     sockfd = -1;
     return;
   }
-  info_hash = new char[20];
-  memcpy(info_hash, hash, 20);
   good = true;
 }
 
@@ -134,7 +140,30 @@ bool Peer::isGood() {
 }
 
 void Peer::update() {
-  cout << "In update\n";
+  bool array[20];
+  for (int i = 0; i<20; i++) {
+    if (i%3 == 0) {
+      array[i] = true;
+    } else {
+      array[i] = false;
+    }
+  }
+//  printf("Bitfield in update: ");
+//  for (int i=0; i< 20; i++) {
+//    printf("%d ", array[i]);
+//  }
+//  printf("\n");
+  Message *message = makeBitfield(array, 20);
+  char *byte_array;
+  int len;
+  message->toByteArray(&byte_array, &len);
+  sendToPeer(byte_array, len);
+  delete message;
+
+//  readFromPeer(&byte_array, &len);
+//  list<Message *> *in_msg = makeMessages(byte_array, len);
+//  message = in_msg->front();
+  
 }
 
 

@@ -2,10 +2,16 @@
 
 using namespace std;
 
-char *getSHA1(char *data) {
+unsigned char *getSHA1(char *data) {
   unsigned char *hash = (unsigned char *) new char[20];
   SHA1((unsigned char *) data, strlen(data), hash);
-  return (char *) hash;
+  return hash;
+}
+
+unsigned char *getSHA1(string data) {
+  unsigned char *hash = (unsigned char *) new char[20];
+  SHA1((unsigned char *) data.c_str(), data.length(), hash);
+  return hash;
 }
 
 bool validSHA1(char *data, unsigned char *expected_hash) {

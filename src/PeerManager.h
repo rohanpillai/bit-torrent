@@ -11,7 +11,7 @@ class PeerManager {
   list<Peer *> pool;
  public:
   void addPeer(Peer *);
-  void update();
+  void updatePeers();
 };
 
 #endif
