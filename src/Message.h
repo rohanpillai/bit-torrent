@@ -30,10 +30,11 @@ class Message {
   ~Message();
   char *getData();
   int getSize();
+  int getType();
   void toByteArray(char **, int *);
 };
 
-std::list<Message *> *makeMessages(char *, int);
+void makeMessages(char *, int, std::list<Message *> *);
 Message *makeBitfield(bool *, int);
 Message *makeHave(int);
 Message *makeNotInterested();
@@ -42,4 +43,8 @@ Message *makeUnchoke();
 Message *makeChoke();
 Message *makePiece(int, int, char *, int);
 Message *makeRequest(int, int, int);
+
+bool *getBitfield(Message *, int *);
+void getPieceAttributes(Message *, int *, int *, int *, char **);
+void getRequestAttributes(Message *, int *, int *, int *);
 #endif

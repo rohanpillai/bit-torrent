@@ -20,6 +20,10 @@ int Message::getSize() {
   return size;
 }
 
+int Message::getType() {
+  return type;
+}
+
 void Message::toByteArray(char **array, int *len) {
   char *byte_array = new char[size + 4 + 4];
   int *n_type = new int[1];
@@ -33,10 +37,9 @@ void Message::toByteArray(char **array, int *len) {
   *len = size + 2*sizeof(int);
 }
 
-list<Message *> *makeMessages(char *_recv, int len) {
+void makeMessages(char *_recv, int len, list<Message *> *lst) {
   char *orig_recv = _recv;
   int navigated_len = 0;
-  list<Message *> *lst = new list<Message *>;
   while (navigated_len < len) {
     int *n_type = (int *) _recv;
     int *n_size = (int *) (_recv + sizeof(int));
@@ -51,7 +54,6 @@ list<Message *> *makeMessages(char *_recv, int len) {
     _recv = orig_recv + navigated_len;
   }
   delete [] orig_recv;
-  return lst;
 }
 
 Message *makeRequest(int index, int begin, int length) {
@@ -155,14 +157,68 @@ Message *makeBitfield(bool *array, int num_pieces) {
       setBit(current_byte, 7 - index);
     }
   }
-  printf("Bitfield ");
-  for (int i = 0; i < num_bytes; i++) {
-    printf("%02x ", (unsigned char) *(_data + i));
-  }
-  printf("\n");
   int *n_num = new int[1];
-  *n_num = htonl(num_bytes);
+  *n_num = htonl(num_pieces);
   memcpy(_data + num_bytes, n_num, 4);
   Message *message = new Message(BITFIELD, message_size, _data);
   return message;
+}
+
+bool *getBitfield(Message *message, int *num) {
+  int size = message->getSize();
+  int *n_num = new int[1];
+  char *data = message->getData();
+  memcpy(n_num, data + (size - 4), 4);
+  *num = ntohl(*n_num);
+
+  bool *has = new bool[*num];
+  int i = 0;
+  int j = 0;
+  int count = 0;
+  while (count < *num) {
+    char *current_byte = data + i;
+    char mask = power_2(7 - j);
+    if (mask & *current_byte) {
+      has[count] = true;
+    } else {
+      has[count] = false;
+    }
+    j++;
+    count++;
+    if (j > 7) {
+      i++;
+      j = 0;
+    }
+  }
+  return has;
+}
+
+void getRequestAttributes(Message *message, int *index, int *begin, int *length) {
+  int size = message->getSize();
+  int *n_index = new int[1];
+  int *n_begin = new int[1];
+  int *n_len = new int[1];
+  char *data = message->getData();
+  memcpy(n_index, data, 4);
+  memcpy(n_begin, data + 4, 4);
+  memcpy(n_len, data + 8, 4);
+  
+  *index = ntohl(*n_index);
+  *begin = ntohl(*n_begin);
+  *length = ntohl(*n_len);
+}
+
+void getPieceAttributes(Message *message, int *index, int *begin, int *length, char **buffer) {
+  int size = message->getSize();
+  int *n_index = new int[1];
+  int *n_begin = new int[1];
+  char *data = message->getData();
+  memcpy(n_index, data, 4);
+  memcpy(n_begin, data + 4, 4);
+
+  *index = ntohl(*n_index);
+  *begin = ntohl(*n_begin);
+  *length = size - 8;
+  
+  *buffer = data + 8;
 }

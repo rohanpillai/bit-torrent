@@ -53,12 +53,7 @@ int main (int argc, char * argv[]){
   string info_string = info_ss.str();
 
   unsigned char *info_hash = getSHA1(info_string);
-  cout << "Info: " << info_string << '\n';
   
-  for (int i=0; i<20; i++) {
-    printf("%02x ", info_hash[i]);
-  }
-  printf("\n");
   bt_info_t *bt_info = extract_bt_info(torrent_args);
 
   if(bt_args.verbose){
@@ -88,13 +83,17 @@ int main (int argc, char * argv[]){
   bind(sockfd, res->ai_addr, res->ai_addrlen);
   listen(sockfd, BACKLOG);
 
-  PeerManager *manager = new PeerManager();
+  char *file_name = bt_args.save_file;
+  if (!bt_args.filename_changed) {
+    file_name = bt_info->name;
+  }
+
+  PeerManager *manager = new PeerManager(file_name, bt_info, bt_args.have_file);
   for (int i = 0; i< MAX_CONNECTIONS; i++) {
     if (bt_args.peers[i] != NULL) {
       Peer *peer = new Peer(bt_args.peers[i], info_hash);
       if (peer->isGood()) {
         printf("Added peer: \n");
-        peer->update();
         manager->addPeer(peer);
       }
     }
@@ -109,12 +108,25 @@ int main (int argc, char * argv[]){
   printf("Starting Main Loop\n");
   while(1){
 
-    //try to accept incoming connection from new peer
-    peer_addr_size = sizeof(peer_addr);
-    new_fd = accept(sockfd, (struct sockaddr *) &peer_addr, &peer_addr_size);
-    Peer *peer = new Peer(new_fd, info_hash);
-    if (peer->isGood()) {
-      manager->addPeer(peer);
+    fd_set input;
+    FD_ZERO(&input);
+    FD_SET(sockfd, &input);
+    struct timeval timeout;
+    timeout.tv_sec = 0;
+    timeout.tv_usec = TIMEOUT_MILLIS * 1000;
+    int n = select(sockfd + 1, &input, NULL, NULL, &timeout);
+    if (n == -1) {
+      printf("Error while non blocking the socket.\n");
+    } else {
+      if (n != 0) {
+        //try to accept incoming connection from new peer
+        peer_addr_size = sizeof(peer_addr);
+        new_fd = accept(sockfd, (struct sockaddr *) &peer_addr, &peer_addr_size);
+        Peer *peer = new Peer(new_fd, info_hash);
+        if (peer->isGood()) {
+          manager->addPeer(peer);
+        }
+      }
     } 
     
     //poll current peers for incoming traffic

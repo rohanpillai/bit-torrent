@@ -82,7 +82,8 @@ typedef struct {
   /* set once torrent is parsed */
   bt_info_t * bt_info; //the parsed info for this torrent
   char *port; 
-
+  bool have_file;
+  bool filename_changed;
 } bt_args_t;
 
 typedef struct {

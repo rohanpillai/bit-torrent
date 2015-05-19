@@ -32,6 +32,8 @@ void usage(FILE * file){
           "                \t (include multiple -p for more than 1 peer)\n"
           "  -I id         \t Set the node identifier to id (dflt: random)\n"
           "  -x port       \t Port number for this process\n"
+          "  -c            \t Indicating seeder with complete file. Need \n"
+          "                \t atleast one seeder.\n"
           "  -v            \t verbose, print additional verbose info\n");
 }
 
@@ -135,8 +137,10 @@ void parse_args(bt_args_t * bt_args, int argc,  char * argv[]){
   }
 
   bt_args->id = 0;
+  bt_args->have_file = false;
+  bt_args->filename_changed = false;
   
-  while ((ch = getopt(argc, argv, "hp:s:l:vI:x:")) != -1) {
+  while ((ch = getopt(argc, argv, "hp:s:l:vI:x:c")) != -1) {
     switch (ch) {
     case 'h': //help
       usage(stdout);
@@ -147,6 +151,7 @@ void parse_args(bt_args_t * bt_args, int argc,  char * argv[]){
       break;
     case 's': //save file
       strncpy(bt_args->save_file,optarg,FILE_NAME_MAX);
+      bt_args->filename_changed = true;
       break;
     case 'l': //log file
       strncpy(bt_args->log_file,optarg,FILE_NAME_MAX);
@@ -176,6 +181,10 @@ void parse_args(bt_args_t * bt_args, int argc,  char * argv[]){
         exit(1);
       }
       bt_args->port = optarg;
+      break;
+    }
+    case 'c': {
+      bt_args->have_file = true;
       break;
     }
     default:
