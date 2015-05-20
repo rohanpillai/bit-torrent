@@ -222,7 +222,7 @@ void Peer::makeRequestForPart() {
   sendToPeer(byte_array, len);
 
   request_begin += packet_length;
-  if (request_begin > request_piece_length) {
+  if (request_begin >= request_piece_length) {
     all_request_sent = true;
   }
 }
@@ -251,11 +251,6 @@ void Peer::reset() {
 }
 
 void Peer::update() {
-  if (active_download) {
-    if (!all_request_sent) {
-      makeRequestForPart();
-    }
-  }
 
   char *byte_array;
   int len;
@@ -283,6 +278,12 @@ void Peer::update() {
         memcpy(incoming_buffer + begin, buffer, length);
         if ((begin + length) >= request_piece_length) {
           piece_complete = true;
+        } else {
+          if (active_download) {
+            if (!all_request_sent) {
+              makeRequestForPart();
+            }
+          }
         }
         break;
       }
@@ -292,7 +293,6 @@ void Peer::update() {
   }
   if (piece_complete) {
     fileManager->addToWriteQueue(request_index, request_piece_length, incoming_buffer);
-    reset();
   }
 }
 

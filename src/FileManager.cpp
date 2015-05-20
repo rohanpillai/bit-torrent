@@ -12,7 +12,13 @@ FileManager::FileManager(char *file_name, int len, int pl, int num_pieces, bool 
   length = len;
   number_pieces = num_pieces;
   piece_length = pl;
-  fs = fopen(file_name, "w");
+  char *mode;
+  if (complete) {
+    mode = "rb";
+  } else {
+    mode = "wb";
+  }
+  fs = fopen(file_name, mode);
   if (fs == NULL) {
     printf("Failed to open file\n");
     good = false;
@@ -30,6 +36,7 @@ FileManager::FileManager(char *file_name, int len, int pl, int num_pieces, bool 
     }
     fclose(fs);
   } else {
+    write_queue = new list<WriteObject *>();
     for (int i=0; i<number_pieces; i++) {
       have[i] = false;
       needed.insert(i);
@@ -95,6 +102,6 @@ int FileManager::sizeofPiece(int index) {
 }
 
 void FileManager::save() {
-  fwrite(buffer, sizeof(char), length, fs);
+  int bytes_written = fwrite(buffer, sizeof(char), length, fs);
   fclose(fs);
 }

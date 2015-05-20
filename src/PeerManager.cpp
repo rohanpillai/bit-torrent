@@ -62,20 +62,20 @@ void PeerManager::updatePeers() {
   for (list<Peer *>::iterator it = pool.begin(); it != pool.end(); it++) {
     (*it)->update();
     if ((*it)->completePiece() && (*it)->isActive()) {
+      (*it)->reset();
       (*it)->makeInactive();
       fileManager->write();
       set<int> *needed = fileManager->getNeeded();
       if (needed->size() == 0) {
         fileManager->save();
         seeding = true; 
-      } 
-    }
-    if (!seeding) {
-      int index = pickPiece((*it));
-      if (index >= 0) {
-        int length = fileManager->sizeofPiece(index);
-        (*it)->downloadPiece(index, length);
-        (*it)->makeActive();
+      } else {
+        int index = pickPiece((*it));
+        if (index >= 0) {
+          int length = fileManager->sizeofPiece(index);
+          (*it)->downloadPiece(index, length);
+          (*it)->makeActive();
+        }
       }
     }
   }

@@ -18,8 +18,8 @@
 #include <list>
 #include <set>
 
-#define MAX_BUFFER_LENGTH 2048
-#define PAYLOAD_LENGTH 512
+#define MAX_BUFFER_LENGTH 15000
+#define PAYLOAD_LENGTH 10000
 #define TIMEOUT_MILLIS 10
 
 using namespace std;
